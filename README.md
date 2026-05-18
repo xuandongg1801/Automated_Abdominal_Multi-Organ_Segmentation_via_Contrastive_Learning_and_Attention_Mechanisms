@@ -12,7 +12,7 @@ Mô hình được huấn luyện end-to-end từ bước tiền xử lý khối
 | STT | Họ và Tên | Lớp | MSSV | GitHub Account |
 | :--: | :-------- | :--: | :--: | :------------- |
 | 1 | Trần Viết Gia Huy | CS0001 | 31231027056 | @tommyhuy1705 |
-| 2 | Nguyễn Minh Nhựt | CS0001 | 31231022656 | @Sura3607 |
+| 2 | Nguyễn Minh Nhựt | CS0001 | 31231022656 | [@SSura3607](https://github.com/Sura3607) |
 | 3 | Nguyễn Trọng Hưởng | CS0001 | [MSSV] | @github_huong |
 | 4 | Tô Xuân Đông | CS0001 | 31231025345 | @xuandongg1801 |
 
