@@ -821,14 +821,35 @@ def show_loaded_segmentation_samples(
     max_samples: int = 3,
     num_classes: int = 9,
     title: str = "Loaded samples",
+    prefer_foreground: bool = True,
+    max_batches_to_scan: int = 16,
 ) -> None:
     """Show original image, colored mask, and overlay for loaded dataset samples."""
 
     import matplotlib.pyplot as plt
 
-    images, masks = next(iter(loader))
-    count = min(max_samples, images.shape[0])
-    print(f"{title} labels:", [torch.unique(masks[index]).tolist() for index in range(count)])
+    selected_images: list[torch.Tensor] = []
+    selected_masks: list[torch.Tensor] = []
+
+    for batch_index, (images, masks) in enumerate(loader):
+        for index in range(images.shape[0]):
+            has_foreground = bool(torch.any(masks[index] > 0).item())
+            if not prefer_foreground or has_foreground:
+                selected_images.append(images[index])
+                selected_masks.append(masks[index])
+            if len(selected_images) >= max_samples:
+                break
+        if len(selected_images) >= max_samples or batch_index + 1 >= max_batches_to_scan:
+            break
+
+    if not selected_images:
+        images, masks = next(iter(loader))
+        count = min(max_samples, images.shape[0])
+        selected_images = [images[index] for index in range(count)]
+        selected_masks = [masks[index] for index in range(count)]
+
+    count = len(selected_images)
+    print(f"{title} labels:", [torch.unique(selected_masks[index]).tolist() for index in range(count)])
 
     fig, axes = plt.subplots(count, 3, figsize=(12, 3.8 * count))
     if count == 1:
@@ -838,8 +859,8 @@ def show_loaded_segmentation_samples(
     for index in range(count):
         _draw_image_mask_overlay(
             axes[index],
-            images[index],
-            masks[index],
+            selected_images[index],
+            selected_masks[index],
             sample_title=f"Sample {index + 1}",
             num_classes=num_classes,
         )
@@ -856,13 +877,35 @@ def show_segmentation_predictions(
     max_samples: int = 4,
     num_classes: int = 9,
     title: str = "Test predictions",
+    prefer_foreground: bool = True,
+    max_batches_to_scan: int = 16,
 ) -> None:
     """Display image, ground-truth mask, and predicted mask for a few samples."""
 
     import matplotlib.pyplot as plt
 
     model.eval()
-    images, masks = next(iter(loader))
+    selected_images: list[torch.Tensor] = []
+    selected_masks: list[torch.Tensor] = []
+    for batch_index, (batch_images, batch_masks) in enumerate(loader):
+        for index in range(batch_images.shape[0]):
+            has_foreground = bool(torch.any(batch_masks[index] > 0).item())
+            if not prefer_foreground or has_foreground:
+                selected_images.append(batch_images[index])
+                selected_masks.append(batch_masks[index])
+            if len(selected_images) >= max_samples:
+                break
+        if len(selected_images) >= max_samples or batch_index + 1 >= max_batches_to_scan:
+            break
+
+    if selected_images:
+        images = torch.stack(selected_images, dim=0)
+        masks = torch.stack(selected_masks, dim=0)
+    else:
+        images, masks = next(iter(loader))
+        images = images[:max_samples]
+        masks = masks[:max_samples]
+
     images = images.to(device)
     logits = model(images)
     logits = resize_logits_to_target(logits, masks.to(device))
