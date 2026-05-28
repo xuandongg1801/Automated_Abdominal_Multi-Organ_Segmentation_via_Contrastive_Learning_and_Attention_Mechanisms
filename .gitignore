@@ -1,0 +1,89 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# Packaging and build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Test, coverage, and type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Jupyter and Kaggle working files
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+kaggle.json
+/kaggle/
+/working/
+/input/
+/outputs/
+/submissions/
+submission.csv
+
+# Data, datasets, and generated training assets
+/data/*
+/datasets/
+/raw_data/
+/processed_data/
+/checkpoints/
+/weights/
+/models/
+/runs/
+/logs/
+/wandb/
+/mlruns/
+/tensorboard/
+*.ckpt
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.onnx
+*.pb
+*.tflite
+*.npy
+*.npz
+*.nii
+*.nii.gz
+*.mha
+*.mhd
+*.dcm
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Local IDE and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Project-private notes and documents
+/AGENT.md
+/docs/privates/*
+!/docs/privates/.gitkeep
