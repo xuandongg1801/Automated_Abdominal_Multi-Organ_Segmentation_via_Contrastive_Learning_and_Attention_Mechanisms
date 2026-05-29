@@ -629,6 +629,99 @@ def _finalize_metrics(
     }
 
 
+def supervised_pixel_contrastive_loss(
+    features: torch.Tensor,
+    targets: torch.Tensor,
+    temperature: float = 0.1,
+    max_samples: int = 2048,
+    include_background: bool = False,
+) -> torch.Tensor:
+    """Supervised contrastive loss over sampled pixel/patch embeddings."""
+
+    if features.ndim != 4:
+        raise ValueError(f"Features must have shape (B, C, H, W), got {tuple(features.shape)}.")
+    if targets.ndim == 4:
+        targets = torch.argmax(targets, dim=1)
+    if targets.ndim != 3:
+        raise ValueError(f"Targets must have shape (B, H, W), got {tuple(targets.shape)}.")
+
+    labels = F.interpolate(
+        targets.unsqueeze(1).float(),
+        size=features.shape[-2:],
+        mode="nearest",
+    ).squeeze(1).long()
+
+    embeddings = features.permute(0, 2, 3, 1).reshape(-1, features.shape[1])
+    labels = labels.reshape(-1)
+    valid = torch.ones_like(labels, dtype=torch.bool)
+    if not include_background:
+        valid &= labels > 0
+
+    embeddings = embeddings[valid]
+    labels = labels[valid]
+    if embeddings.shape[0] < 2:
+        return features.new_zeros(())
+
+    if max_samples > 0 and embeddings.shape[0] > max_samples:
+        indices = torch.randperm(embeddings.shape[0], device=features.device)[:max_samples]
+        embeddings = embeddings[indices]
+        labels = labels[indices]
+
+    positive_mask = labels.unsqueeze(0) == labels.unsqueeze(1)
+    positive_mask.fill_diagonal_(False)
+    anchors_with_positive = positive_mask.any(dim=1)
+    if not anchors_with_positive.any():
+        return features.new_zeros(())
+
+    embeddings = F.normalize(embeddings.float(), dim=1)
+    logits = embeddings @ embeddings.t()
+    logits = logits / max(temperature, 1e-6)
+    logits = logits - logits.max(dim=1, keepdim=True).values.detach()
+    self_mask = torch.eye(logits.shape[0], dtype=torch.bool, device=logits.device)
+    logits = logits.masked_fill(self_mask, torch.finfo(logits.dtype).min)
+    exp_logits = torch.exp(logits)
+
+    numerator = (exp_logits * positive_mask).sum(dim=1)
+    denominator = exp_logits.sum(dim=1).clamp_min(1e-12)
+    losses = -torch.log((numerator / denominator).clamp_min(1e-12))
+    return losses[anchors_with_positive].mean()
+
+
+def _find_contrastive_feature_module(model: nn.Module) -> Optional[nn.Module]:
+    base_model = getattr(model, "module", model)
+    if hasattr(base_model, "token_to_map"):
+        return base_model.token_to_map
+    encoder = getattr(base_model, "encoder", None)
+    layer4 = getattr(encoder, "layer4", None) if encoder is not None else None
+    if layer4 is not None:
+        return layer4
+    layer3 = getattr(encoder, "layer3", None) if encoder is not None else None
+    if layer3 is not None:
+        return layer3
+    return None
+
+
+def _forward_with_contrastive_features(
+    model: nn.Module,
+    images: torch.Tensor,
+) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+    feature_module = _find_contrastive_feature_module(model)
+    if feature_module is None:
+        return model(images), None
+
+    holder: dict[str, torch.Tensor] = {}
+
+    def save_features(_module: nn.Module, _inputs: tuple[Any, ...], output: torch.Tensor) -> None:
+        holder["features"] = output
+
+    handle = feature_module.register_forward_hook(save_features)
+    try:
+        logits = model(images)
+    finally:
+        handle.remove()
+    return logits, holder.get("features")
+
+
 def train_one_epoch(
     model: nn.Module,
     loader: DataLoader,
@@ -638,12 +731,19 @@ def train_one_epoch(
     num_classes: int,
     scaler: Optional[torch.cuda.amp.GradScaler] = None,
     include_background_metrics: bool = False,
+    contrastive_weight: float = 0.0,
+    contrastive_temperature: float = 0.1,
+    contrastive_max_samples: int = 2048,
+    contrastive_include_background: bool = False,
 ) -> dict[str, Any]:
     """Train for one epoch and return loss/Dice/IoU metrics."""
 
     model.train()
     state = _empty_metric_state(num_classes)
     loss_total = 0.0
+    segmentation_loss_total = 0.0
+    contrastive_loss_total = 0.0
+    use_contrastive = contrastive_weight > 0
 
     for images, masks in loader:
         images = images.to(device, non_blocking=True)
@@ -652,23 +752,60 @@ def train_one_epoch(
 
         if scaler is not None:
             with torch.cuda.amp.autocast():
-                logits = model(images)
+                if use_contrastive:
+                    logits, contrastive_features = _forward_with_contrastive_features(model, images)
+                else:
+                    logits = model(images)
+                    contrastive_features = None
                 logits = resize_logits_to_target(logits, masks)
-                loss = criterion(logits, masks)
+                segmentation_loss_value = criterion(logits, masks)
+                if use_contrastive and contrastive_features is not None:
+                    contrastive_loss_value = supervised_pixel_contrastive_loss(
+                        features=contrastive_features,
+                        targets=masks,
+                        temperature=contrastive_temperature,
+                        max_samples=contrastive_max_samples,
+                        include_background=contrastive_include_background,
+                    )
+                    loss = segmentation_loss_value + contrastive_weight * contrastive_loss_value
+                else:
+                    contrastive_loss_value = segmentation_loss_value.new_zeros(())
+                    loss = segmentation_loss_value
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
         else:
-            logits = model(images)
+            if use_contrastive:
+                logits, contrastive_features = _forward_with_contrastive_features(model, images)
+            else:
+                logits = model(images)
+                contrastive_features = None
             logits = resize_logits_to_target(logits, masks)
-            loss = criterion(logits, masks)
+            segmentation_loss_value = criterion(logits, masks)
+            if use_contrastive and contrastive_features is not None:
+                contrastive_loss_value = supervised_pixel_contrastive_loss(
+                    features=contrastive_features,
+                    targets=masks,
+                    temperature=contrastive_temperature,
+                    max_samples=contrastive_max_samples,
+                    include_background=contrastive_include_background,
+                )
+                loss = segmentation_loss_value + contrastive_weight * contrastive_loss_value
+            else:
+                contrastive_loss_value = segmentation_loss_value.new_zeros(())
+                loss = segmentation_loss_value
             loss.backward()
             optimizer.step()
 
         loss_total += float(loss.detach().cpu())
+        segmentation_loss_total += float(segmentation_loss_value.detach().cpu())
+        contrastive_loss_total += float(contrastive_loss_value.detach().cpu())
         _update_metric_state(state, logits.argmax(dim=1), masks, num_classes)
 
-    return _finalize_metrics(state, loss_total, len(loader), include_background_metrics)
+    metrics = _finalize_metrics(state, loss_total, len(loader), include_background_metrics)
+    metrics["segmentation_loss"] = segmentation_loss_total / max(1, len(loader))
+    metrics["contrastive_loss"] = contrastive_loss_total / max(1, len(loader))
+    return metrics
 
 
 @torch.no_grad()
@@ -710,6 +847,10 @@ def fit_segmentation_model(
     use_amp: bool = True,
     early_stopping_patience: Optional[int] = None,
     early_stopping_min_delta: float = 1e-4,
+    contrastive_weight: float = 0.0,
+    contrastive_temperature: float = 0.1,
+    contrastive_max_samples: int = 2048,
+    contrastive_include_background: bool = False,
 ) -> list[dict[str, Any]]:
     """Run train/val loop, save the best validation Dice checkpoint, and optionally early-stop."""
 
@@ -722,19 +863,37 @@ def fit_segmentation_model(
 
     for epoch in range(1, epochs + 1):
         train_metrics = train_one_epoch(
-            model, loaders["train"], criterion, optimizer, device, num_classes, scaler=scaler
+            model,
+            loaders["train"],
+            criterion,
+            optimizer,
+            device,
+            num_classes,
+            scaler=scaler,
+            contrastive_weight=contrastive_weight,
+            contrastive_temperature=contrastive_temperature,
+            contrastive_max_samples=contrastive_max_samples,
+            contrastive_include_background=contrastive_include_background,
         )
         val_metrics = evaluate_segmentation(
             model, loaders["val"], criterion, device, num_classes
         )
         row = {"epoch": epoch, "train": train_metrics, "val": val_metrics}
         history.append(row)
-        print(
+        message = (
             f"Epoch {epoch:03d}/{epochs:03d} | "
-            f"train_loss={train_metrics['loss']:.4f} train_dice={train_metrics['dice_mean']:.4f} | "
-            f"val_loss={val_metrics['loss']:.4f} val_dice={val_metrics['dice_mean']:.4f} "
+            f"train_loss={train_metrics['loss']:.4f} train_dice={train_metrics['dice_mean']:.4f}"
+        )
+        if contrastive_weight > 0:
+            message += (
+                f" train_seg_loss={train_metrics['segmentation_loss']:.4f}"
+                f" train_contrastive={train_metrics['contrastive_loss']:.4f}"
+            )
+        message += (
+            f" | val_loss={val_metrics['loss']:.4f} val_dice={val_metrics['dice_mean']:.4f} "
             f"val_iou={val_metrics['iou_mean']:.4f}"
         )
+        print(message)
         improved = val_metrics["dice_mean"] > best_dice + early_stopping_min_delta
         if improved:
             best_dice = val_metrics["dice_mean"]
