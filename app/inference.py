@@ -70,13 +70,17 @@ def resolve_model_dir(spec: ModelSpec) -> tuple[Path, str]:
 
     try:
         import kagglehub
+        from kagglehub.exceptions import DataCorruptionError
     except ImportError as exc:
         raise ImportError(
             "kagglehub is required to download model checkpoints. "
             "Install requirements.txt or set a local *_MODEL_DIR environment variable."
         ) from exc
 
-    return Path(kagglehub.model_download(spec.handle)), "kagglehub"
+    try:
+        return Path(kagglehub.model_download(spec.handle)), "kagglehub"
+    except DataCorruptionError:
+        return Path(kagglehub.model_download(spec.handle, force_download=True)), "kagglehub"
 
 
 def build_model(spec: ModelSpec, model_info: dict[str, Any] | None = None) -> nn.Module:
