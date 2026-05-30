@@ -58,6 +58,13 @@ def default_image_key(arrays: dict[str, np.ndarray]) -> str:
     return next(iter(arrays))
 
 
+def default_label_key(arrays: dict[str, np.ndarray], image_key: str) -> str | None:
+    for key in ("label", "labels", "mask", "masks", "seg", "segs", "y", "Y"):
+        if key in arrays and key != image_key:
+            return key
+    return None
+
+
 def is_image_like(array: np.ndarray) -> bool:
     if array.ndim == 2:
         return True
@@ -147,6 +154,24 @@ def main() -> None:
         slice_index = st.slider("Slice", 0, count - 1, min(count // 2, count - 1))
 
     image = select_slice(array, slice_index)
+    label_key = default_label_key(arrays, image_key)
+    label_values: np.ndarray | None = None
+    if label_key is not None:
+        try:
+            label_slice = select_slice(arrays[label_key], slice_index)
+            label_values = np.unique(label_slice.astype(np.int64))
+        except Exception:
+            label_values = None
+
+    if label_values is not None:
+        if np.all(label_values == 0):
+            st.warning(
+                f"`{label_key}` for this slice contains only background. "
+                "A black predicted mask can be the correct result for this input."
+            )
+        else:
+            st.caption(f"Ground-truth labels in `{label_key}`: {label_values.tolist()}")
+
     hu_window = (-125.0, 275.0) if use_hu_window else None
 
     try:
