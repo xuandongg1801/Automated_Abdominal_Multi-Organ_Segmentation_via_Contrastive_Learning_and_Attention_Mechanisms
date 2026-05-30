@@ -26,10 +26,15 @@ from app.model_registry import DEFAULT_MODEL_LABEL, MODEL_SPECS
 
 
 def apply_streamlit_secrets() -> None:
-    for key in ("KAGGLE_USERNAME", "KAGGLE_KEY"):
-        value = st.secrets.get(key)
-        if value:
-            os.environ.setdefault(key, str(value))
+    try:
+        secrets = st.secrets
+        for key in ("KAGGLE_USERNAME", "KAGGLE_KEY"):
+            value = secrets.get(key)
+            if value:
+                os.environ.setdefault(key, str(value))
+    except Exception as exc:
+        if exc.__class__.__name__ != "StreamlitSecretNotFoundError":
+            raise
 
 
 def read_uploaded_arrays(uploaded_file) -> dict[str, np.ndarray]:
