@@ -82,6 +82,10 @@ submission.csv
 *.swo
 .DS_Store
 Thumbs.db
+.streamlit/secrets.toml
+!.streamlit/secrets.toml.example
+.streamlit/*.log
+.streamlit/run_streamlit.cmd
 
 # Project-private notes and documents
 /AGENT.md
