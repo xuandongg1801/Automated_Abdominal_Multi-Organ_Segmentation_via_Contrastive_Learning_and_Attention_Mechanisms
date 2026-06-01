@@ -26,7 +26,7 @@ class TransformerToFeatureMap(nn.Module):
     def __init__(self, embed_dim: int = 768, out_channels: int = 512) -> None:
         super().__init__()
         self.proj = nn.Sequential(
-            nn.Conv2d(embed_dim, out_channels, kernel_size=1, bias=False),
+            nn.Conv2d(embed_dim, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
         )
