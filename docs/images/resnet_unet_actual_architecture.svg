@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900">
+  <defs>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .title { font: 700 32px Arial, sans-serif; fill: #172033; }
+      .subtitle { font: 18px Arial, sans-serif; fill: #526070; }
+      .label { font: 700 18px Arial, sans-serif; fill: #172033; }
+      .small { font: 15px Arial, sans-serif; fill: #3e4a59; }
+      .tiny { font: 13px Arial, sans-serif; fill: #526070; }
+      .blockText { font: 700 16px Arial, sans-serif; fill: #ffffff; }
+      .note { font: 14px Arial, sans-serif; fill: #657386; }
+      .conv3 { fill: #2f6fba; stroke: #1f4f87; stroke-width: 2; }
+      .conv1 { fill: #009688; stroke: #006d63; stroke-width: 2; }
+      .up { fill: #2ea44f; stroke: #1b7f38; stroke-width: 2; }
+      .res { fill: #6b7fd7; stroke: #4457a8; stroke-width: 2; }
+      .pool { fill: #a64242; stroke: #812d2d; stroke-width: 2; }
+      .head { fill: #0b8a8f; stroke: #06676b; stroke-width: 2; }
+      .box { fill: #ffffff; stroke: #d5dce8; stroke-width: 2; rx: 12; }
+      .arrow { stroke: #5f6f82; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .skip { stroke: #9ba7b5; stroke-width: 3; fill: none; marker-end: url(#arrowGrey); stroke-dasharray: 8 8; }
+      .concat { fill: #f2b84b; stroke: #b98215; stroke-width: 2; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#5f6f82"/>
+    </marker>
+    <marker id="arrowGrey" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#9ba7b5"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1500" height="900"/>
+  <text class="title" x="60" y="58">Actual ResNetUNet architecture in code</text>
+  <text class="subtitle" x="60" y="90">src/models/resnet_unet.py + src/models/layers.py: ResNet-50 encoder, 1x1 skip bridges, U-Net style decoder</text>
+
+  <rect class="box" x="42" y="135" width="172" height="90"/>
+  <text class="label" x="83" y="170">Input</text>
+  <text class="small" x="77" y="198">B x C x H x W</text>
+
+  <rect class="box" x="265" y="125" width="315" height="120"/>
+  <text class="label" x="292" y="158">ResNet-50 Encoder</text>
+  <rect class="conv3" x="292" y="178" width="74" height="42" rx="7"/>
+  <text class="blockText" x="307" y="204">7x7</text>
+  <rect class="pool" x="382" y="178" width="74" height="42" rx="7"/>
+  <text class="blockText" x="395" y="204">Pool</text>
+  <rect class="res" x="472" y="178" width="78" height="42" rx="7"/>
+  <text class="blockText" x="486" y="204">L1-L4</text>
+  <text class="tiny" x="294" y="235">Bottleneck pattern inside layers: 1x1 -> 3x3 -> 1x1</text>
+
+  <path class="arrow" d="M214 180 L265 180"/>
+
+  <g transform="translate(95,315)">
+    <text class="label" x="0" y="-25">Encoder skip features</text>
+    <rect class="res" x="0" y="0" width="155" height="58" rx="8"/>
+    <text class="blockText" x="27" y="24">stem: 64</text>
+    <text class="tiny" x="30" y="45">after 7x7 conv</text>
+
+    <rect class="res" x="0" y="92" width="155" height="58" rx="8"/>
+    <text class="blockText" x="25" y="116">layer1: 256</text>
+    <text class="tiny" x="24" y="137">ResNet bottleneck</text>
+
+    <rect class="res" x="0" y="184" width="155" height="58" rx="8"/>
+    <text class="blockText" x="25" y="208">layer2: 512</text>
+    <text class="tiny" x="24" y="229">ResNet bottleneck</text>
+
+    <rect class="res" x="0" y="276" width="155" height="58" rx="8"/>
+    <text class="blockText" x="21" y="300">layer3: 1024</text>
+    <text class="tiny" x="24" y="321">ResNet bottleneck</text>
+
+    <rect class="res" x="0" y="368" width="155" height="58" rx="8"/>
+    <text class="blockText" x="21" y="392">layer4: 2048</text>
+    <text class="tiny" x="36" y="413">bottleneck</text>
+  </g>
+
+  <g transform="translate(365,315)">
+    <text class="label" x="0" y="-25">ChannelBridge skip projections</text>
+    <rect class="conv1" x="0" y="0" width="180" height="58" rx="8"/>
+    <text class="blockText" x="29" y="25">1x1: 64 -> 64</text>
+    <text class="tiny" x="51" y="45">bridge0</text>
+
+    <rect class="conv1" x="0" y="92" width="180" height="58" rx="8"/>
+    <text class="blockText" x="23" y="117">1x1: 256 -> 128</text>
+    <text class="tiny" x="51" y="137">bridge1</text>
+
+    <rect class="conv1" x="0" y="184" width="180" height="58" rx="8"/>
+    <text class="blockText" x="23" y="209">1x1: 512 -> 256</text>
+    <text class="tiny" x="51" y="229">bridge2</text>
+
+    <rect class="conv1" x="0" y="276" width="180" height="58" rx="8"/>
+    <text class="blockText" x="17" y="301">1x1: 1024 -> 512</text>
+    <text class="tiny" x="51" y="321">bridge3</text>
+  </g>
+
+  <path class="skip" d="M250 344 L365 344"/>
+  <path class="skip" d="M250 436 L365 436"/>
+  <path class="skip" d="M250 528 L365 528"/>
+  <path class="skip" d="M250 620 L365 620"/>
+
+  <g transform="translate(700,660)">
+    <text class="label" x="0" y="-35">Decoder path</text>
+    <rect class="up" x="0" y="0" width="120" height="58" rx="8"/>
+    <text class="blockText" x="22" y="25">up 2x2</text>
+    <text class="tiny" x="14" y="45">2048 -> 512</text>
+    <rect class="concat" x="145" y="0" width="72" height="58" rx="8"/>
+    <text class="blockText" x="158" y="35">cat</text>
+    <rect class="conv3" x="242" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="273" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="276" y="45">1024 -> 512</text>
+    <rect class="conv3" x="412" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="443" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="450" y="45">512 -> 512</text>
+  </g>
+
+  <g transform="translate(755,515)">
+    <rect class="up" x="0" y="0" width="120" height="58" rx="8"/>
+    <text class="blockText" x="22" y="25">up 2x2</text>
+    <text class="tiny" x="21" y="45">512 -> 256</text>
+    <rect class="concat" x="145" y="0" width="72" height="58" rx="8"/>
+    <text class="blockText" x="158" y="35">cat</text>
+    <rect class="conv3" x="242" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="273" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="276" y="45">512 -> 256</text>
+    <rect class="conv3" x="412" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="443" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="450" y="45">256 -> 256</text>
+  </g>
+
+  <g transform="translate(810,370)">
+    <rect class="up" x="0" y="0" width="120" height="58" rx="8"/>
+    <text class="blockText" x="22" y="25">up 2x2</text>
+    <text class="tiny" x="21" y="45">256 -> 128</text>
+    <rect class="concat" x="145" y="0" width="72" height="58" rx="8"/>
+    <text class="blockText" x="158" y="35">cat</text>
+    <rect class="conv3" x="242" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="273" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="276" y="45">256 -> 128</text>
+    <rect class="conv3" x="412" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="443" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="450" y="45">128 -> 128</text>
+  </g>
+
+  <g transform="translate(865,225)">
+    <rect class="up" x="0" y="0" width="120" height="58" rx="8"/>
+    <text class="blockText" x="22" y="25">up 2x2</text>
+    <text class="tiny" x="27" y="45">128 -> 64</text>
+    <rect class="concat" x="145" y="0" width="72" height="58" rx="8"/>
+    <text class="blockText" x="158" y="35">cat</text>
+    <rect class="conv3" x="242" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="273" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="283" y="45">128 -> 64</text>
+    <rect class="conv3" x="412" y="0" width="145" height="58" rx="8"/>
+    <text class="blockText" x="443" y="24">3x3 + ReLU</text>
+    <text class="tiny" x="457" y="45">64 -> 64</text>
+  </g>
+
+  <path class="arrow" d="M1257 690 C1298 690 1298 544 1312 544"/>
+  <path class="arrow" d="M1312 544 C1353 544 1353 399 1367 399"/>
+  <path class="arrow" d="M1367 399 C1408 399 1408 254 1422 254"/>
+
+  <path class="skip" d="M545 620 C630 620 630 689 845 689"/>
+  <path class="skip" d="M545 528 C660 528 660 544 900 544"/>
+  <path class="skip" d="M545 436 C690 436 690 399 955 399"/>
+  <path class="skip" d="M545 344 C720 344 720 254 1010 254"/>
+
+  <rect class="head" x="1280" y="115" width="122" height="58" rx="8"/>
+  <text class="blockText" x="1300" y="140">Head 1x1</text>
+  <text class="tiny" x="1309" y="160">64 -> classes</text>
+  <rect class="box" x="1284" y="205" width="114" height="54"/>
+  <text class="label" x="1305" y="237">Logits</text>
+  <path class="arrow" d="M1341 225 L1341 173"/>
+
+  <rect class="box" x="60" y="790" width="1380" height="72"/>
+  <text class="label" x="85" y="820">Legend</text>
+  <rect class="conv3" x="185" y="800" width="34" height="22" rx="4"/><text class="small" x="228" y="817">conv 3x3 + BN + ReLU</text>
+  <rect class="conv1" x="455" y="800" width="34" height="22" rx="4"/><text class="small" x="498" y="817">conv 1x1 + BN + ReLU bridge / final 1x1 head</text>
+  <rect class="up" x="850" y="800" width="34" height="22" rx="4"/><text class="small" x="893" y="817">ConvTranspose2d 2x2 stride 2</text>
+  <rect class="res" x="1145" y="800" width="34" height="22" rx="4"/><text class="small" x="1188" y="817">ResNet-50 bottleneck blocks</text>
+  <text class="note" x="85" y="848">Key difference from the classic U-Net figure: the encoder is ResNet-50, so it contains internal 1x1 convolutions, and skip tensors are projected by explicit 1x1 ChannelBridge layers before concatenation.</text>
+</svg>
