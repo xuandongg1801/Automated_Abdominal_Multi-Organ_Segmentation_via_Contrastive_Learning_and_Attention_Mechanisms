@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -23,6 +24,13 @@ from src.utils import _normalize_image, count_parameters, load_checkpoint
 
 IMAGE_KEYS = ("image", "images", "img", "imgs", "x", "X", "ct", "volume")
 NUM_CLASSES = len(CLASS_NAMES)
+
+
+def segmentation_colormap() -> ListedColormap:
+    colors = plt.get_cmap("tab20", NUM_CLASSES)(np.arange(NUM_CLASSES))
+    colors[0, :3] = 0.0
+    colors[0, 3] = 1.0
+    return ListedColormap(colors)
 
 
 @dataclass
@@ -174,7 +182,7 @@ def predict_mask(
 
 
 def colorize_mask(mask: np.ndarray, alpha: float = 1.0) -> np.ndarray:
-    cmap = plt.get_cmap("tab20", NUM_CLASSES)
+    cmap = segmentation_colormap()
     rgba = cmap(mask / max(1, NUM_CLASSES - 1))
     rgba[mask == 0, :3] = 0.0
     rgba[..., 3] = np.where(mask == 0, 0.0, alpha)

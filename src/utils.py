@@ -947,6 +947,16 @@ def _mask_for_display(mask: torch.Tensor) -> np.ndarray:
     return mask.detach().cpu().numpy().astype(np.int64)
 
 
+def _segmentation_colormap(num_classes: int):
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import ListedColormap
+
+    colors = plt.get_cmap("tab20", num_classes)(np.arange(num_classes))
+    colors[0, :3] = 0.0
+    colors[0, 3] = 1.0
+    return ListedColormap(colors)
+
+
 def _draw_image_mask_overlay(
     axes: Sequence[Any],
     image: torch.Tensor,
@@ -959,7 +969,7 @@ def _draw_image_mask_overlay(
     image_np = _image_for_display(image)
     mask_np = _mask_for_display(mask)
     colored_mask = np.ma.masked_where(mask_np == 0, mask_np)
-    cmap = plt.get_cmap("tab20", num_classes)
+    cmap = _segmentation_colormap(num_classes)
 
     axes[0].imshow(image_np, cmap="gray" if image_np.ndim == 2 else None)
     axes[0].set_title(f"{sample_title} - image")
@@ -1072,7 +1082,7 @@ def show_segmentation_predictions(
     images = images.cpu()
 
     count = min(max_samples, images.shape[0])
-    cmap = plt.get_cmap("tab20", num_classes)
+    cmap = _segmentation_colormap(num_classes)
     fig, axes = plt.subplots(count, 4, figsize=(15, 3.8 * count))
     if count == 1:
         axes = np.expand_dims(axes, axis=0)
@@ -1086,11 +1096,13 @@ def show_segmentation_predictions(
 
         axes[index, 0].imshow(image_np, cmap="gray" if image_np.ndim == 2 else None)
         axes[index, 0].set_title(f"Sample {index + 1} - image")
+        mask_overlay = np.ma.masked_where(mask_np == 0, mask_np)
         axes[index, 1].imshow(mask_np, cmap=cmap, vmin=0, vmax=num_classes - 1)
         axes[index, 1].set_title("Ground truth")
         axes[index, 2].imshow(pred_np, cmap=cmap, vmin=0, vmax=num_classes - 1)
         axes[index, 2].set_title("Prediction")
         axes[index, 3].imshow(image_np, cmap="gray" if image_np.ndim == 2 else None)
+        axes[index, 3].imshow(mask_overlay, cmap=cmap, vmin=0, vmax=num_classes - 1, alpha=0.25)
         axes[index, 3].imshow(pred_overlay, cmap=cmap, vmin=0, vmax=num_classes - 1, alpha=0.55)
         axes[index, 3].set_title("Prediction overlay")
         for axis in axes[index]:
