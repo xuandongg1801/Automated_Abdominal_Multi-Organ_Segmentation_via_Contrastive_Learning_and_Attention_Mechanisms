@@ -20,12 +20,12 @@ Hướng tiếp cận chính:
 
 ## 2. Thành viên
 
-| STT | Họ và Tên | Lớp | MSSV | GitHub |
-| :--: | :-- | :--: | :--: | :-- |
-| 1 | Trần Viết Gia Huy | CS0001 | 31231027056 | [@Tommyhuy1705](https://github.com/Tommyhuy1705) |
-| 2 | Nguyễn Minh Nhựt | CS0001 | 31231022656 | [@Sura3607](https://github.com/Sura3607) |
-| 3 | Nguyễn Trọng Hưởng | CS0001 | 31231023691 | [@trongjhuongwr](https://github.com/trongjhuongwr) |
-| 4 | Tô Xuân Đông | CS0001 | 31231025345 | [@xuandongg1801](https://github.com/xuandongg1801) |
+| STT | Họ và Tên | Lớp | MSSV | GitHub | Công việc | Tiến độ |
+| :--: | :-- | :--: | :--: | :-- | :-- | :--: |
+| 1 | Trần Viết Gia Huy | CS0001 | 31231027056 | [@Tommyhuy1705](https://github.com/Tommyhuy1705) | - Xây dựng mô hình ResNet-UNet<br>- Xây dựng vòng lặp huấn luyện và ghi log<br>- Báo cáo luận<br>- Slide | 100% |
+| 2 | Nguyễn Minh Nhựt | CS0001 | 31231022656 | [@Sura3607](https://github.com/Sura3607) | - Tiền xử lý dữ liệu<br>- Xây dựng mô hình TransUNet<br>- Xây dựng App<br>- Báo cáo luận<br>- Slide | 100% |
+| 3 | Nguyễn Trọng Hưởng | CS0001 | 31231023691 | [@trongjhuongwr](https://github.com/trongjhuongwr) | - Cài đặt hàm Contrastive Loss<br>- Xây dựng pipeline tăng cường dữ liệu<br>- Báo cáo luận<br>- Slide | 100% |
+| 4 | Tô Xuân Đông | CS0001 | 31231025345 | [@xuandongg1801](https://github.com/xuandongg1801) | - Thiết lập các chỉ số đánh giá mô hình<br>- So sánh kết quả và trực quan hóa<br>- Báo cáo luận<br>- Slide | 100% |
 
 ## 3. Cấu trúc repo
 
